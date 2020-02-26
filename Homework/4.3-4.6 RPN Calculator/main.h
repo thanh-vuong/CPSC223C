@@ -21,11 +21,18 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#include <cmath>
 
-#define MAXOP   100     /* max size of operand/operator */
-#define NUMBER  '0'     /* signal that a number was found */
 #define MAXVAL  100
-#define NAME    'n'     /* signal that a function was found */
+#define MAXOP   100     /* max size of operand/operator */
+#define MAXVAR  100
+#define NUMBER  '0'     /* signal that a number was found */
+#define MATH    '1'     /* signal that a function was found */
+#define STACK   '2'
+#define VAR     '3'
+#define CONST   '4'
+
+
 
 size_t sp = 0;   // aka unsigned long -- printf using %zu
 double val[MAXVAL];   // stack of values
@@ -46,29 +53,50 @@ void ungetch_(int c) {
     buf[bufp++] = c;
 }
 
+void buildstr(char* s) {
+    int c;
+    int i = 0;
+
+    while (isalpha(c = getch_())) {
+        s[i++] = tolower(c);
+    }
+
+    s[i] = '\0';
+}
+
 int getop(char* s) {
     int i, c;
     while ((s[0] = c = getch_()) == ' ' || c == '\t') {}  // skip whitespace
     s[1] = '\0';
 
-    i = 0;
 
-    // found letter, append next letters to s
+    // found math command, grab name
     if (isalpha(c)) {
-        while (isalpha(c)) {
-            s[i++] = tolower(c);
-            c = getch_();
-        }
-        s[i] = '\0';
-        if (c != EOF) {
-            ungetch_(c);
-        }
-        return strlen(s) > 1 ? NAME : c;
+        buildstr(s);
+        return MATH;
     }
-    // if not a digit, fraction point, or negative, return
-    if (!isdigit(c) && c != '.' && c != '-') {
-        return c;
+
+    // found stack command (start with '@'), skip over symbol, grab name
+    if (c == '@') {
+        s++;
+        buildstr(s);
+        return STACK;
     }
+
+    // found variable command (start with '=' or '?')
+    if (c == '=' || c == '?') {
+        buildstr(s);
+        return VAR;
+    }
+
+    // found constant command (start with '_')
+    if (c == '_') {
+        s++;
+        buildstr(s);
+        return CONST;
+    }
+
+    i = 0;
 
     // found minus sign
     if (c == '-') {
@@ -85,7 +113,12 @@ int getop(char* s) {
             return '-';
         }
     }
-    
+
+    // if not a digit, fraction point, or negative, return
+    if (!isdigit(c) && c != '.' && c != '-') {
+        return c;
+    }
+
     if (isdigit(c)) {  // get digits before '.'
         while (isdigit(s[++i] = c = getch_())) {}
     }
@@ -117,9 +150,93 @@ void push(double f) {
     val[sp++] = f;
 }
 
+void constfunc(char* s) {
+    if (strcmp(s, "pi") == 0) {
+        push(3.14159);
+    }
+    else if (strcmp(s, "e") == 0) {
+        push(2.7182818284);
+    }
+    else {
+        fprintf(stderr, "unknown constant: %s\n", s);
+    }
+}
+
+typedef struct Var {
+    char* name;
+    double value;
+} Var;
+
+int varcount = 0;
+Var vars[100];
+
+int indexofvar(char* s) {
+    for (int i = 0; i < varcount; i++) {
+        if (strcmp(s, vars[i].name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void varfunc(char* s) {
+    int index = indexofvar(s);
+
+    if (s[0] == '=') {
+        if (varcount == MAXVAR) {
+            fprintf(stderr, "too many variables, can't push %g\n", pop());
+            return;
+        }
+        // update known variable
+        if (index != -1) {
+            vars[index].value = pop();
+        }
+        // add new variable
+        else {
+            varcount++;
+            vars[varcount].name = s;
+            vars[varcount].value = pop();
+        }
+    }
+    if (s[0] == '?') {
+        if (index != -1) {
+            fprintf(stderr, "unknown variable: %s\n", s);
+        }
+        push(vars[index].value);
+    }
+}
+
+void stackfunc(char* s) {
+    double op1, op2;
+
+    if (strcmp(s, "clear") == 0) {
+        sp = 0;
+        memset(val, 0, sizeof(val[sp]));
+        fprintf(stderr, "stack cleared\n");
+    }
+    else if (strcmp(s, "peek") == 0) {
+        op2 = pop();
+        printf("\t%.8g\n", op2);
+        push(op2);
+    }
+    else if (strcmp(s, "dup") == 0) {
+        op2 = pop();
+        push(op2);
+        push(op2);
+    }
+    else if (strcmp(s, "swap") == 0) {
+        op2 = pop();
+        op1 = pop();
+        push(op2);
+        push(op1);
+    }
+    else {
+        fprintf(stderr, "Unknown stack function: %s\n", s);
+    }
+}
+
 void mathfunc(char* s) {
-    double op1;
-    double op2;
+    double op1, op2;
 
     if (strcmp(s, "pow") == 0) {
         op2 = pop();
@@ -141,13 +258,12 @@ void mathfunc(char* s) {
         push(sin(pop()));
     }
     else {
-        fprintf(stderr, "mathfunc: %s not recognized\n", s);
+        fprintf(stderr, "Unknown math function: %s\n", s);
     }
 }
 
 void rpn(void) {
     int type;
-    double op1;
     double op2;
     char s[BUFSIZ];
 
@@ -182,29 +298,17 @@ void rpn(void) {
             }
             push((int)pop() % (int)(op2));
             break;
-        case NAME:   // math functions
+        case MATH:
             mathfunc(s);
             break;
-        case 'p':   // peek at top
-            op2 = pop();
-            printf("top\t%.8g\n", op2);
-            push(op2);
+        case STACK:
+            stackfunc(s);
             break;
-        case 'd':   // duplicate top
-            op2 = pop();
-            push(op2);
-            push(op2);
+        case VAR:
+            varfunc(s);
             break;
-        case 's':   // swap top two
-            op2 = pop();
-            op1 = pop();
-            push(op2);
-            push(op1);
-            break;
-        case 'c':   // clear val stack
-            printf("clear\n");
-            sp = 0;
-            memset(val, 0, sizeof(val[sp]));
+        case CONST:
+            constfunc(s);
             break;
         default:
             fprintf(stderr, "unknown command %s\n", s);
