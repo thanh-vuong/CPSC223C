@@ -21,7 +21,7 @@ void count() {
         else if (c == '\\') {
             ++nbackslash;
         }
-        else if (isspace(c)) {
+        else if (isalnum(c)) {
             ++nc;
         }
         printf("lines: %d\n", nl);
