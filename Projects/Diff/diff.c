@@ -53,7 +53,7 @@ char* file_accesstime(const char* filename) {
         return NULL;
     }
     static char str[BUFLEN];
-    if (strftime(str, BUFLEN, "%Y-%m-%d %X %Z", gmtime(&fileinfo.st_mtime)) != 0){
+    if (strftime(str, BUFLEN, "%Y-%m-%d %X %Z", gmtime(&fileinfo.st_mtime)) == 0){
         fprintf(stderr, "Unable to get access time of %s\n", filename);
         return NULL;
     }
@@ -192,20 +192,6 @@ int main(int argc, const char* argv[]) {
     //para_print(q, printright);
     int foundmatch = 0;
 
-    while (p != NULL || q != NULL) {
-        if (para_equal(p, q, ignorecase) == 0) {
-            para_print(q, printboth);
-        }
-        else {
-            para_print(p, printleft);
-            para_print(q, printright);
-        }
-        p = para_next(p);
-        q = para_next(q);
-    }
-    printf("**************************************************************\n");
-    p = para_first(strings1, count1);
-    q = para_first(strings2, count2);
     para* qlast = q;
     while (p != NULL) {
         qlast = q;
