@@ -8,23 +8,7 @@
 
 #pragma warning (disable: 4996)
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <time.h>
-
-#define ARGC_ERROR 1
-#define TOOMANYFILES_ERROR 2
-#define CONFLICTING_OUTPUT_OPTIONS 3
-
-#define MAXSTRINGS 1024
-#define MAXPARAS 4096
-
-#define HASHLEN 200
-
-#include "para.h"
-#include "util.h"
+#include "diff.h"
 
 void help(void) {
     printf("-v, --version 	Output version information and exit.\n");
@@ -46,7 +30,7 @@ void version(void) {
     printf("You may redistribute copies of this program\n");
     printf("under the terms of the GNU General Public License.\n");
     printf("For more information about these matters, see the file named COPYING.\n");
-    printf("Written by William McCarthy, Tony Stark, and Dr. Steven Strange\n\n");
+    printf("Written by William McCarthy, and Thanh Vuong\n\n");
 }
 
 void todo_list(void) {
@@ -55,23 +39,25 @@ void todo_list(void) {
     printf("\nTODO: handle the rest of diff's options\n");
 }
 
-char buf[BUFLEN];
-char *strings1[MAXSTRINGS], *strings2[MAXSTRINGS];
+
 int showversion = 0, showbrief = 0, ignorecase = 0, report_identical = 0, showsidebyside = 0;
 int showleftcolumn = 0, showunified = 0, showcontext = 0, suppresscommon = 0, diffnormal = 0;
-int showhelp = 0, striptrailingcr = 0;
+int showhelp = 0;
 
 int count1 = 0, count2 = 0, different = 0;
 
-void print_file_stats(const char* filename) {
+char* file_accesstime(const char* filename) {
     struct stat fileinfo;
-    if (stat(filename, &fileinfo) == 0) {
-        struct tm* time;
-        char str[BUFLEN];
-        if (strftime(str, BUFLEN - 1, "%Y-%m-%d %X %Z", gmtime(&fileinfo.st_mtime)) == 0) {
-            printf("%s %s\n", filename, str);
-        }
+    if (stat(filename, &fileinfo) != 0) {
+        fprintf(stderr, "Unable to get stats of %s\n", filename);
+        return NULL;
     }
+    static char str[BUFLEN];
+    if (strftime(str, BUFLEN, "%Y-%m-%d %X %Z", gmtime(&fileinfo.st_mtime)) != 0){
+        fprintf(stderr, "Unable to get access time of %s\n", filename);
+        return NULL;
+    }
+    return str;
 }
 
 void loadfiles(const char* filename1, const char* filename2) {
@@ -97,7 +83,7 @@ void print_option(const char* name, int value) { printf("%17s: %s\n", name, yeso
 
 void diff_output_conflict_error(void) {
     fprintf(stderr, "diff: conflicting output style options\n");
-    fprintf(stderr, "diff: Try `diff --help' for more information.)\n");
+    fprintf(stderr, "diff: Try 'diff --help' for more information.)\n");
     exit(CONFLICTING_OUTPUT_OPTIONS);
 }
 
@@ -120,7 +106,6 @@ void showoptions(const char* file1, const char* file2) {
     print_option("showcontext", showcontext);
     print_option("show_unified", showunified);
     print_option("showhelp", showhelp);
-    print_option("strip_trailing_cr", striptrailingcr);
 
     printf("file1: %s,  file2: %s\n\n\n", file1, file2);
 
@@ -151,7 +136,6 @@ void init_options_files(int argc, const char* argv[]) {
         setoption(arg, "-c", "--context", &showcontext);
         setoption(arg, "-u", "--unified", &showunified);
         setoption(arg, "--help", NULL, &showhelp);
-        setoption(arg, "--strip-trailing-cr", NULL, &striptrailingcr);
 
         if (arg[0] != '-') {
             if (cnt == 2) {
@@ -181,8 +165,9 @@ void init_options_files(int argc, const char* argv[]) {
     loadfiles(files[0], files[1]);
 
     if (showcontext) {
-        print_file_stats(files[0]);
-        print_file_stats(files[1]);
+        printf("*** %s %s\n", files[0], file_accesstime(files[0]));
+        printf("--- %s %s\n", files[1], file_accesstime(files[1]));
+        printf("********************************\n");
     }
 
     if (report_identical && !different) { printf("The files are identical.\n\n"); exit(0); }
