@@ -53,7 +53,7 @@ char* file_modtime(const char* filename) {
         return NULL;
     }
     static char str[BUFLEN];
-    if (strftime(str, BUFLEN, "%Y-%m-%d %X %Z", localtime(&fileinfo.st_mtime)) == 0){
+    if (strftime(str, BUFLEN, "%Y-%m-%d %X %Z", gmtime(&fileinfo.st_mtime)) == 0){
         fprintf(stderr, "Unable to get access time of %s\n", filename);
         return NULL;
     }
