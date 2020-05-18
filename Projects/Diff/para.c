@@ -71,7 +71,7 @@ int para_equal(para* p, para* q, int ignorecase) {
     int (*cmp)(const char*, const char*);
     cmp = ignorecase ? &_stricmp : &strcmp;
     while ((equal = cmp(p->base[i], q->base[i])) == 0 && i < p->stop && j < q->stop) { ++i; ++j; }
-    return equal == 0 ? 1 : 0;//1;
+    return 1;// equal == 0 ? 1 : 0;//1;
 }
 
 void para_print(para* p, void (*fp)(const char*)) {

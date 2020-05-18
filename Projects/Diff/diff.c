@@ -196,7 +196,7 @@ int main(int argc, const char* argv[]) {
         while (q != NULL && (foundmatch = para_equal(p, q, ignorecase)) == 0) {
             q = para_next(q);
         }
-        // q = qlast;
+         q = qlast;
 
         if (foundmatch) {
             // Find next different para in file2, print right
