@@ -18,7 +18,7 @@ struct para {
     char** base;    // ptrs to strs in whole file
     int filesize;   // num of lines in whole file
     int start;      // starting line num of current para
-    int stop;       // stopping line num of current para
+    int stop;       // stopping line num of current para (only has \n)
     char* firstline;   // DEBUG only
     char* secondline;
 };

@@ -1,5 +1,5 @@
 //
-//  diff_02.c
+//  diff.c
 //  diff
 //
 //  Created by William McCarthy on 4/29/19.
@@ -46,14 +46,14 @@ int showhelp = 0;
 
 int count1 = 0, count2 = 0, different = 0;
 
-char* file_accesstime(const char* filename) {
+char* file_modtime(const char* filename) {
     struct stat fileinfo;
     if (stat(filename, &fileinfo) != 0) {
         fprintf(stderr, "Unable to get stats of %s\n", filename);
         return NULL;
     }
     static char str[BUFLEN];
-    if (strftime(str, BUFLEN, "%Y-%m-%d %X %Z", gmtime(&fileinfo.st_mtime)) == 0){
+    if (strftime(str, BUFLEN, "%Y-%m-%d %X %Z", localtime(&fileinfo.st_mtime)) == 0){
         fprintf(stderr, "Unable to get access time of %s\n", filename);
         return NULL;
     }
@@ -165,8 +165,8 @@ void init_options_files(int argc, const char* argv[]) {
     loadfiles(files[0], files[1]);
 
     if (showcontext) {
-        printf("*** %s %s\n", files[0], file_accesstime(files[0]));
-        printf("--- %s %s\n", files[1], file_accesstime(files[1]));
+        printf("*** %s %s\n", files[0], file_modtime(files[0]));
+        printf("--- %s %s\n", files[1], file_modtime(files[1]));
         printf("********************************\n");
     }
 
@@ -186,23 +186,20 @@ int main(int argc, const char* argv[]) {
     para* p = para_first(strings1, count1);
     para* q = para_first(strings2, count2);
 
-    //printf("%s\n", para_info(p));
-    //para_print(p, printleft);
-    //printf("%s\n",para_info(q));
-    //para_print(q, printright);
     int foundmatch = 0;
 
     para* qlast = q;
     while (p != NULL) {
         qlast = q;
         foundmatch = 0;
-        // Find common para in file2
+        // Find first different para in file2
         while (q != NULL && (foundmatch = para_equal(p, q, ignorecase)) == 0) {
             q = para_next(q);
         }
-        q = qlast;
+        // q = qlast;
 
         if (foundmatch) {
+            // Find next different para in file2, print right
             while ((foundmatch = para_equal(p, q, ignorecase)) == 0) {
                 para_print(q, printright);
                 q = para_next(q);

@@ -26,19 +26,21 @@ para* para_make(char* base[], int filesize, int start, int stop) {
 
 para* para_first(char* base[], int size) {
     para* p = para_make(base, size, 0, -1);
-    return p;// para_next(p);
+    return p;// para_next(p); 
 }
 
 void para_destroy(para* p) { free(p); }
 
 para* para_next(para* p) {
+    // empty or eof
     if (p == NULL || p->stop == p->filesize) { return NULL; }
 
-    int i;
     para* pnew = para_make(p->base, p->filesize, p->stop + 1, p->stop + 1);
+    // move stop num to end of para (line with only \n)
+    int i;
     for (i = pnew->start; i < p->filesize && strcmp(p->base[i], "\n") != 0; ++i) {}
     pnew->stop = i;
-
+    // eof
     if (pnew->start >= p->filesize) {
         free(pnew);
         pnew = NULL;
@@ -68,10 +70,7 @@ int para_equal(para* p, para* q, int ignorecase) {
     int i = p->start, j = q->start, equal = 0;
     int (*cmp)(const char*, const char*);
     cmp = ignorecase ? &_stricmp : &strcmp;
-    //if (ignorecase) {
-    //    while ((equal = stricmp(p->base[i], q->base[i])) == 0 && i < p->stop && j < q->stop) { ++i; ++j; }
-    //}
-    while ((equal = strcmp(p->base[i], q->base[i])) == 0 && i < p->stop && j < q->stop) { ++i; ++j; }
+    while ((equal = cmp(p->base[i], q->base[i])) == 0 && i < p->stop && j < q->stop) { ++i; ++j; }
     return equal == 0 ? 1 : 0;//1;
 }
 

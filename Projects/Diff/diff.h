@@ -26,7 +26,7 @@ char* strings1[MAXSTRINGS], * strings2[MAXSTRINGS];
 void help(void);
 void version(void);
 void todo_list(void);
-char* file_accesstime(const char* filename);
+char* file_modtime(const char* filename);
 void loadfiles(const char* filename1, const char* filename2);
 void print_option(const char* name, int value);
 void diff_output_conflict_error(void);
