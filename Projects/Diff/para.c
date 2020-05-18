@@ -62,16 +62,16 @@ char* para_info(para* p) {
 }
 
 int para_equal(para* p, para* q, int ignorecase) {
-    // Not equal if either are empty, diff num of lines, or
-    // at end of file
+    // Not equal if either are empty, diff num of lines, or at eof
     if (p == NULL || q == NULL) { return 0; }
     if (para_size(p) != para_size(q)) { return 0; }
     if (p->start >= p->filesize || q->start >= q->filesize) { return 0; }
     int i = p->start, j = q->start, equal = 0;
     int (*cmp)(const char*, const char*);
     cmp = ignorecase ? &_stricmp : &strcmp;
+    // Compare lines, stop at first difference
     while ((equal = cmp(p->base[i], q->base[i])) == 0 && i < p->stop && j < q->stop) { ++i; ++j; }
-    return 1;// equal == 0 ? 1 : 0;//1;
+    return equal;// equal == 0 ? 1 : 0;//1;
 }
 
 void para_print(para* p, void (*fp)(const char*)) {
